@@ -1,3 +1,4 @@
+import { DataQueryResponseData, TimeSeries } from '@grafana/data';
 import { sample } from 'lodash';
 import * as math from 'mathjs';
 import { InfinityQuery, dataPoint, DataOverride, InfinityQuerySources } from '../types';
@@ -123,9 +124,9 @@ class RandomWalk {
 
 export class SeriesProvider {
   constructor(private target: InfinityQuery) {}
-  query(startTime: number, endTime: number) {
+  query(startTime: number, endTime: number): Promise<DataQueryResponseData> {
     return new Promise((resolve, reject) => {
-      let result = [];
+      let result: TimeSeries[] = [];
       if (
         this.target.source === InfinityQuerySources.RandomWalk ||
         this.target.source === InfinityQuerySources.Expression

@@ -60,5 +60,8 @@
     "babel-core": "^6.26.3",
     "babel-loader": "^8.1.0",
     "vuepress": "^1.5.4"
+  },
+  "resolutions": {
+    "rxjs": "6.6.3"
   }
 }

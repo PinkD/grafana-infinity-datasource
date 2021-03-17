@@ -1,3 +1,4 @@
+import { flatten } from 'lodash';
 import { getBackendSrv, BackendSrvRequest } from '@grafana/runtime';
 import { CSVParser, JSONParser, XMLParser, HTMLParser } from './parsers';
 import {
@@ -7,6 +8,7 @@ import {
   InfinityQuerySources,
   InfinityQueryType,
 } from '../types';
+import { DataQueryResponse } from '@grafana/data';
 
 export class InfinityProvider {
   constructor(private target: InfinityQuery, private instanceSettings: InfinityInstanceSettings) {}
@@ -18,8 +20,8 @@ export class InfinityProvider {
       case InfinityQueryType.GraphQL:
         return new JSONParser(res, this.target).getResults();
       case InfinityQueryType.XML:
-        let xmldata = await new XMLParser(res, this.target);
-        return xmldata.getResults();
+        let xmlData = await new XMLParser(res, this.target);
+        return xmlData.getResults();
       case InfinityQueryType.CSV:
         return new CSVParser(res, this.target).getResults();
       default:
@@ -63,7 +65,7 @@ export class InfinityProvider {
       }
     });
   }
-  query() {
+  query(): Promise<DataQueryResponse> {
     return new Promise((resolve, reject) => {
       if (this.target.source === InfinityQuerySources.Inline) {
         resolve(this.formatResults(this.target.data));

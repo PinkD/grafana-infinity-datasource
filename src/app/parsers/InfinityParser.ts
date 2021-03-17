@@ -1,4 +1,5 @@
 import { uniq, flatten } from 'lodash';
+import { DataQueryResponseData, TimeSeries, TableData } from '@grafana/data';
 import { filterResults } from './filter';
 import {
   InfinityQuery,
@@ -37,7 +38,7 @@ export class InfinityParser {
       [InfinityQueryType.CSV, InfinityQueryType.JSON].includes(this.target.type) && this.target.columns.length === 0
     );
   }
-  toTable() {
+  toTable(): TableData {
     let columns = this.target.columns;
     if (this.canAutoGenerateColumns()) {
       columns = this.AutoColumns;
@@ -47,7 +48,7 @@ export class InfinityParser {
       columns,
     };
   }
-  toTimeSeries() {
+  toTimeSeries(): TimeSeries[] {
     const targets = uniq(this.series.map(s => s.target));
     return targets.map(t => {
       return {
@@ -56,7 +57,7 @@ export class InfinityParser {
       };
     });
   }
-  getResults() {
+  getResults(): DataQueryResponseData {
     if (
       this.target.filters &&
       this.target.filters.length > 0 &&

@@ -1,5 +1,7 @@
+import { Observable, merge, from } from 'rxjs';
 import flatten from 'lodash/flatten';
-import { DataSourceApi, DataQueryResponse, DataQueryRequest } from '@grafana/data';
+import { DataSourceWithBackend } from '@grafana/runtime';
+import { DataQueryResponse, DataQueryRequest, toDataFrame } from '@grafana/data';
 import { InfinityProvider } from './app/InfinityProvider';
 import { SeriesProvider } from './app/SeriesProvider';
 import { replaceVariables } from './app/InfinityQuery';
@@ -12,9 +14,10 @@ import {
   HealthCheckResult,
   HealthCheckResultStatus,
   InfinityInstanceSettings,
+  InfinityDataSourceJSONOptions,
 } from './types';
 
-export class Datasource extends DataSourceApi<InfinityQuery> {
+export class Datasource extends DataSourceWithBackend<InfinityQuery, InfinityDataSourceJSONOptions> {
   instanceSettings: InfinityInstanceSettings;
   constructor(iSettings: InfinityInstanceSettings) {
     super(iSettings);
@@ -51,47 +54,34 @@ export class Datasource extends DataSourceApi<InfinityQuery> {
       }
     });
   }
-  query(options: DataQueryRequest<InfinityQuery>): Promise<DataQueryResponse> {
-    const promises: any[] = [];
-    options.targets
-      .filter((t: InfinityQuery) => t.hide !== true)
-      .forEach((t: InfinityQuery) => {
+  query(options: DataQueryRequest<InfinityQuery>): Observable<DataQueryResponse> {
+    return new Observable<DataQueryResponse>(subscriber => {
+      const targets = options.targets.filter((t: InfinityQuery) => t.hide !== true);
+      targets.forEach(async t => {
         t = this.overrideWithGlobalQuery(t);
-        promises.push(
-          new Promise((resolve, reject) => {
-            switch (t.type) {
-              case 'csv':
-              case 'html':
-              case 'json':
-              case 'xml':
-              case 'graphql':
-                new InfinityProvider(replaceVariables(t, options.scopedVars), this.instanceSettings)
-                  .query()
-                  .then(res => resolve(res))
-                  .catch(ex => {
-                    reject(ex);
-                  });
-                break;
-              case 'series':
-                new SeriesProvider(replaceVariables(t, options.scopedVars))
-                  .query(new Date(options.range.from.toDate()).getTime(), new Date(options.range.to.toDate()).getTime())
-                  .then(res => resolve(res))
-                  .catch(ex => {
-                    reject(ex);
-                  });
-                break;
-              case 'global':
-                reject('Query not found');
-                break;
-              default:
-                reject('Unknown Query Type');
-                break;
-            }
-          })
-        );
+        switch (t.type) {
+          case 'csv':
+          case 'html':
+          case 'json':
+          case 'xml':
+          case 'graphql':
+            let iq = new InfinityProvider(replaceVariables(t, options.scopedVars), this.instanceSettings).query();
+            from(iq).subscribe(r => subscriber.next({ data: [toDataFrame(r)] }));
+            break;
+          case 'series':
+            const start = new Date(options.range.from.toDate()).getTime();
+            const end = new Date(options.range.to.toDate()).getTime();
+            let sq = new SeriesProvider(replaceVariables(t, options.scopedVars)).query(start, end);
+            from(sq).subscribe(r => subscriber.next({ data: [toDataFrame(r)] }));
+            break;
+          case 'global':
+            subscriber.error('Query not found');
+            break;
+          default:
+            subscriber.error('Unknown Query Type');
+            break;
+        }
       });
-    return Promise.all(promises).then(results => {
-      return { data: flatten(results) };
     });
   }
   metricFindQuery(originalQuery: VariableQuery): Promise<MetricFindValue[]> {

@@ -27,7 +27,7 @@ export const URLEditor: React.FC<ScrapperProps> = props => {
   const LABEL_WIDTH = props.mode === EditorMode.Variable ? 10 : 8;
   return (
     <>
-      {['url', 'local-fs'].includes(props.query.source) ? (
+      {['url', 'local-file'].includes(props.query.source) ? (
         <div className="gf-form-inline">
           <div className="gf-form">
             <label className={`gf-form-label query-keyword width-${LABEL_WIDTH}`}>

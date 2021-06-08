@@ -8,9 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -110,7 +110,7 @@ func getRequest(settings InfinitySettings, body io.Reader, query Query) (req *ht
 	return req, err
 }
 
-func (client *Client) req(url string, body *strings.Reader, settings InfinitySettings, isJSON bool, query Query) (obj interface{}, err error) {
+func (client *Client) req(url string, body *strings.Reader, settings InfinitySettings, query Query) ([]byte, error) {
 	req, _ := getRequest(settings, body, query)
 	res, err := client.HttpClient.Do(req)
 	if err != nil {
@@ -120,17 +120,16 @@ func (client *Client) req(url string, body *strings.Reader, settings InfinitySet
 	if res.StatusCode >= http.StatusBadRequest {
 		return nil, errors.New(res.Status)
 	}
-	bodyBytes, err := ioutil.ReadAll(res.Body)
-	return string(bodyBytes), err
+	bodyBytes, err := io.ReadAll(res.Body)
+	return bodyBytes, err
 }
 
-func (client *Client) GetResults(query Query) (o interface{}, err error) {
-	isJSON := false
-	if query.Type == "json" || query.Type == "graphql" {
-		isJSON = true
-	}
-	switch query.URLOptions.Method {
-	case "POST":
+func (client *Client) GetResults(query Query) ([]byte, error) {
+	method := query.URLOptions.Method
+	switch method {
+	case http.MethodGet:
+		return client.req(query.URL, nil, client.Settings, query)
+	case http.MethodPost:
 		body := strings.NewReader(query.URLOptions.Data)
 		if query.Type == "graphql" {
 			jsonData := map[string]string{
@@ -139,30 +138,17 @@ func (client *Client) GetResults(query Query) (o interface{}, err error) {
 			jsonValue, _ := json.Marshal(jsonData)
 			body = strings.NewReader(string(jsonValue))
 		}
-		return client.req(query.URL, body, client.Settings, isJSON, query)
+		return client.req(query.URL, body, client.Settings, query)
 	default:
-		return client.req(query.URL, nil, client.Settings, isJSON, query)
+		return nil, errors.New(fmt.Sprintf("unsupported method %s", method))
 	}
 }
 
-// func isFileAllowedToQuery(allowedPaths []string, path string) bool {
-// 	for _, allowedPath := range allowedPaths {
-// 		if strings.HasPrefix(strings.ToLower(path), strings.ToLower(allowedPath)) {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
-func (client *Client) GetLocalFileContent(query Query) (o interface{}, err error) {
-	return nil, errors.New("feature disabled")
-	// if isFileAllowedToQuery(client.Settings.LocalSources.AllowedPaths, query.URL) && client.Settings.LocalSources.Enabled {
-	// 	filePath := strings.TrimSpace(query.URL)
-	// 	content, err := os.ReadFile(filePath)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	return string(content), nil
-	// }
-	// return nil, errors.New("file path not allowed. Contact grafana admin to setup this in datasource settings")
+func (client *Client) GetLocalFileContent(query Query) ([]byte, error) {
+	filePath := strings.TrimSpace(query.URL)
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	return content, nil
 }

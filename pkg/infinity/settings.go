@@ -8,11 +8,6 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
-type LocalSourcesOptions struct {
-	Enabled      bool     `json:"enabled"`
-	AllowedPaths []string `json:"allowed_paths"`
-}
-
 type InfinitySettings struct {
 	URL                string
 	BasicAuthEnabled   bool
@@ -27,7 +22,6 @@ type InfinitySettings struct {
 	TLSCACert          string
 	TLSClientCert      string
 	TLSClientKey       string
-	LocalSources       LocalSourcesOptions
 }
 
 type InfinitySettingsJson struct {
@@ -35,7 +29,6 @@ type InfinitySettingsJson struct {
 	ServerName         string              `json:"serverName,omitempty"`
 	TLSClientAuth      bool                `json:"tlsClientAuth,omitempty"`
 	TLSAuthWithCACert  bool                `json:"tlsAuthWithCACert,omitempty"`
-	LocalSources       LocalSourcesOptions `json:"local_sources_options,omitempty"`
 }
 
 func LoadSettings(config backend.DataSourceInstanceSettings) (settings InfinitySettings, err error) {
@@ -51,7 +44,6 @@ func LoadSettings(config backend.DataSourceInstanceSettings) (settings InfinityS
 		settings.ServerName = infJson.ServerName
 		settings.TLSClientAuth = infJson.TLSClientAuth
 		settings.TLSAuthWithCACert = infJson.TLSAuthWithCACert
-		settings.LocalSources = infJson.LocalSources
 	}
 	if val, ok := config.DecryptedSecureJSONData["basicAuthPassword"]; ok {
 		settings.Password = val

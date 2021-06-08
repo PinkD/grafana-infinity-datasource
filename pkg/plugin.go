@@ -63,7 +63,7 @@ func (ds *InfinityDatasource) query(ctx context.Context, query backend.DataQuery
 }
 
 type instanceSettings struct {
-	client *infinity.Client
+	c *infinity.Client
 }
 
 func (is *instanceSettings) Dispose() {}
@@ -78,7 +78,7 @@ func newDataSourceInstance(setting backend.DataSourceInstanceSettings) (instance
 		return nil, err
 	}
 	return &instanceSettings{
-		client: client,
+		c: client,
 	}, nil
 }
 

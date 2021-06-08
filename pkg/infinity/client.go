@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -130,15 +129,12 @@ func (client *Client) GetResults(query Query) ([]byte, error) {
 	case http.MethodGet:
 		return client.req(query.URL, nil, client.Settings, query)
 	case http.MethodPost:
-		body := strings.NewReader(query.URLOptions.Data)
-		if query.Type == "graphql" {
-			jsonData := map[string]string{
-				"query": query.URLOptions.Data,
-			}
-			jsonValue, _ := json.Marshal(jsonData)
-			body = strings.NewReader(string(jsonValue))
+		filePath := strings.TrimSpace(query.URL)
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, err
 		}
-		return client.req(query.URL, body, client.Settings, query)
+		return content, nil
 	default:
 		return nil, errors.New(fmt.Sprintf("unsupported method %s", method))
 	}
